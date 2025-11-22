@@ -101,14 +101,25 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
   };
 
   const updateQuestionsLanguage = () => {
+    // Store the current state before updating
+    const currentQuestion = questions[currentQuestionIndex];
+    const wasAnswered = showResult;
+    const oldSelectedAnswer = selectedAnswer;
+    
+    // Find the index of the selected answer in the old options (if it exists)
+    let selectedAnswerIndex: number | null = null;
+    if (oldSelectedAnswer && currentQuestion) {
+      selectedAnswerIndex = currentQuestion.options.findIndex((opt: string) => opt === oldSelectedAnswer);
+    }
+    
     // Update existing questions to use the new language without changing the terms or option order
-    setQuestions(prevQuestions => {
-      return prevQuestions.map(question => {
+    setQuestions((prevQuestions: QuizQuestion[]) => {
+      const updatedQuestions = prevQuestions.map((question: QuizQuestion) => {
         // Translate correct answer
         const correctAnswer = cardLanguage === "zh" ? question.term.definitionChinese : question.term.definition;
         
         // Translate each option using the stored term mapping
-        const newOptions = question.optionTermMap.map((term, index) => {
+        const newOptions = question.optionTermMap.map((term: MusicTerm | null) => {
           if (term === null) {
             // This is the correct answer position
             return correctAnswer;
@@ -126,11 +137,25 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
           optionTermMap: question.optionTermMap, // Keep the same mapping
         };
       });
+      
+      // Calculate the new selectedAnswer if an answer was selected (submitted or not)
+      if (selectedAnswerIndex !== null && selectedAnswerIndex !== -1) {
+        const updatedQuestion = updatedQuestions[currentQuestionIndex];
+        if (updatedQuestion) {
+          const newSelectedAnswer = updatedQuestion.options[selectedAnswerIndex];
+          // Update selectedAnswer to the translated version
+          setSelectedAnswer(newSelectedAnswer);
+          // Preserve showResult state (true if submitted, false if just selected)
+          setShowResult(wasAnswered);
+        }
+      } else {
+        // No answer was selected, reset selection
+        setSelectedAnswer(null);
+        setShowResult(false);
+      }
+      
+      return updatedQuestions;
     });
-    
-    // Reset the current answer selection when language changes
-    setSelectedAnswer(null);
-    setShowResult(false);
   };
 
   const handleStartQuiz = () => {
