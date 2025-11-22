@@ -40,11 +40,12 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
 
     const query = searchQuery.toLowerCase();
     
-    // Search in both English and Chinese fields
+    // Search in both English and Chinese fields, including abbreviation
     const matchesSearch =
       term.term.toLowerCase().includes(query) ||
       term.definition.toLowerCase().includes(query) ||
       (term.example && term.example.toLowerCase().includes(query)) ||
+      (term.abbreviation && term.abbreviation.toLowerCase().includes(query)) ||
       term.termChinese.includes(searchQuery) ||
       term.definitionChinese.includes(searchQuery) ||
       (term.exampleChinese && term.exampleChinese.includes(searchQuery));
@@ -87,7 +88,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
                 className="cursor-pointer"
                 onClick={() => setSelectedGrade(grade)}
               >
-                {gradeLabels[grade]}
+                {t.grades[grade as keyof typeof t.grades] || gradeLabels[grade]}
               </Badge>
             ))}
           </div>
@@ -106,7 +107,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
               className="cursor-pointer"
               onClick={() => setSelectedCategory("")}
             >
-              {cardLanguage === "en" ? "All Categories" : "所有类别"}
+              {t.allCategories}
             </Badge>
             {categories.map((category) => (
               <Badge
@@ -115,7 +116,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
                 className="cursor-pointer"
                 onClick={() => setSelectedCategory(category)}
               >
-                {category}
+                {t.categories[category as keyof typeof t.categories] || category}
               </Badge>
             ))}
           </div>
@@ -131,18 +132,25 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
               <CardHeader>
                 <div className="flex items-start justify-between gap-2">
                   <CardTitle className="flex-1">
-                    {term.term}
+                    <div className="flex items-center gap-2">
+                      <span>{term.term}</span>
+                      {term.abbreviation && (
+                        <span className="text-sm font-normal text-muted-foreground">
+                          ({term.abbreviation})
+                        </span>
+                      )}
+                    </div>
                   </CardTitle>
                   <div className="flex gap-2 items-center">
                     <Badge variant="outline" className="bg-purple-50 border-purple-200">
-                      {gradeLabels[term.grade]}
+                      {t.grades[term.grade as keyof typeof t.grades] || gradeLabels[term.grade]}
                     </Badge>
                     <Badge 
                       variant="outline" 
                       className="border-teal-200"
                       style={{ backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }}
                     >
-                      {term.category}
+                      {t.categories[term.category as keyof typeof t.categories] || term.category}
                     </Badge>
                   </div>
                 </div>

@@ -211,7 +211,7 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
               >
                 <div className="text-center">
                   <div className="font-semibold">
-                    {gradeLabels[grade]}
+                    {t.grades[grade as keyof typeof t.grades] || gradeLabels[grade]}
                   </div>
                   <div className="text-xs opacity-70 mt-1">
                     {grade === 0 
@@ -293,11 +293,17 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
         <CardHeader>
           <div className="flex items-center justify-between mb-2 gap-2">
             <Badge variant="outline" className="bg-purple-50 border-purple-200">
-              {gradeLabels[currentQuestion.term.grade]}
+              {t.grades[currentQuestion.term.grade as keyof typeof t.grades] || gradeLabels[currentQuestion.term.grade]}
             </Badge>
           </div>
           <CardTitle>
-            {t.whatIs} "{currentQuestion.term.term}"?
+            {t.whatIs} "{currentQuestion.term.term}"
+            {currentQuestion.term.abbreviation && (
+              <span className="text-base font-normal text-muted-foreground ml-1">
+                ({currentQuestion.term.abbreviation})
+              </span>
+            )}
+            ?
           </CardTitle>
           <CardDescription>{t.selectCorrect}</CardDescription>
         </CardHeader>

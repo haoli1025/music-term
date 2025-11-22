@@ -8,6 +8,7 @@ export interface MusicTerm {
   category: string;
   grade: number;
   example?: string;
+  abbreviation?: string;
   termChinese: string;
   definitionChinese: string;
   exampleChinese?: string;
@@ -28,9 +29,9 @@ export const gradeLabels: Record<number, string> = {
 
 export const gradeLabelsChinese: Record<number, string> = {
   0: "所有级别",
-  1: "一级",
-  2: "二级",
-  3: "三级",
-  4: "四级",
-  5: "五级"
+  1: "第一级",
+  2: "第二级",
+  3: "第三级",
+  4: "第四级",
+  5: "第五级"
 };

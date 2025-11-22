@@ -27,7 +27,25 @@ export const translations = {
     selectGradeDescription: "Select the ABRSM grade level for your quiz, or choose 'All Grades' for a mixed quiz.",
     startQuiz: "Start Quiz",
     changeGrade: "Change Grade",
-    terms: "terms"
+    terms: "terms",
+    allCategories: "All Categories",
+    grades: {
+      0: "All Grades",
+      1: "Grade 1",
+      2: "Grade 2",
+      3: "Grade 3",
+      4: "Grade 4",
+      5: "Grade 5"
+    },
+    categories: {
+      "Tempo": "Tempo",
+      "Dynamics": "Dynamics",
+      "Expression": "Expression",
+      "Articulation": "Articulation",
+      "Form/Structure": "Form/Structure",
+      "Style": "Style",
+      "General": "General"
+    }
   },
   zh: {
     appTitle: "音乐术语探索",
@@ -57,6 +75,24 @@ export const translations = {
     selectGradeDescription: "选择您的 ABRSM 级别测验，或选择'所有级别'进行混合测验。",
     startQuiz: "开始测验",
     changeGrade: "更改级别",
-    terms: "个术语"
+    terms: "个术语",
+    allCategories: "所有类别",
+    grades: {
+      0: "所有级别",
+      1: "第一级",
+      2: "第二级",
+      3: "第三级",
+      4: "第四级",
+      5: "第五级"
+    },
+    categories: {
+      "Tempo": "速度",
+      "Dynamics": "力度",
+      "Expression": "表情",
+      "Articulation": "演奏法",
+      "Form/Structure": "曲式/结构",
+      "Style": "风格",
+      "General": "通用"
+    }
   }
 };
