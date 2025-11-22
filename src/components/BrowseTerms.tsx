@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { MusicTerm, grades, gradeLabels } from "../data/musicTerms";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Badge } from "./ui/badge";
-import { Search, GraduationCap } from "lucide-react";
+import { Search, GraduationCap, Tag } from "lucide-react";
+import { translations } from "../data/translations";
 
 interface BrowseTermsProps {
   terms: MusicTerm[];
@@ -15,18 +16,28 @@ interface BrowseTermsProps {
 export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQueryChange, cardLanguage = "en" }: BrowseTermsProps) {
   const [internalSearchQuery, setInternalSearchQuery] = useState("");
   const [selectedGrade, setSelectedGrade] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  
+  const t = translations[cardLanguage];
   
   // Use external search query if provided (for state persistence), otherwise use internal
   const searchQuery = externalSearchQuery !== undefined ? externalSearchQuery : internalSearchQuery;
   const setSearchQuery = onSearchQueryChange || setInternalSearchQuery;
 
+  // Get all unique categories from terms
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(new Set(terms.map(term => term.category))).sort();
+    return uniqueCategories;
+  }, [terms]);
+
   const filteredTerms = terms.filter((term) => {
+    const matchesGrade = selectedGrade === 0 || term.grade === selectedGrade;
+    const matchesCategory = !selectedCategory || term.category === selectedCategory;
+    
     if (!searchQuery.trim()) {
-      const matchesGrade = selectedGrade === 0 || term.grade === selectedGrade;
-      return matchesGrade;
+      return matchesGrade && matchesCategory;
     }
 
-    const matchesGrade = selectedGrade === 0 || term.grade === selectedGrade;
     const query = searchQuery.toLowerCase();
     
     // Search in both English and Chinese fields
@@ -38,7 +49,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
       term.definitionChinese.includes(searchQuery) ||
       (term.exampleChinese && term.exampleChinese.includes(searchQuery));
     
-    return matchesSearch && matchesGrade;
+    return matchesSearch && matchesGrade && matchesCategory;
   });
 
   // Sort by grade, then by term name
@@ -56,7 +67,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
           <Input
             type="text"
-            placeholder={cardLanguage === "en" ? "Search music terms..." : "搜索音乐术语..."}
+            placeholder={t.searchPlaceholder}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -66,7 +77,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm">
             <GraduationCap className="h-4 w-4 text-purple-600" />
-            <span className="font-medium">{cardLanguage === "en" ? "Filter by Grade" : "按级别筛选"}</span>
+            <span className="font-medium">{t.filterByGrade}</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {grades.map((grade) => (
@@ -77,6 +88,34 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
                 onClick={() => setSelectedGrade(grade)}
               >
                 {gradeLabels[grade]}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <hr className="border-gray-200" />
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Tag className="h-4 w-4 text-purple-600" />
+            <span className="font-medium">{t.filterByCategory}</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Badge
+              variant={!selectedCategory ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => setSelectedCategory("")}
+            >
+              {cardLanguage === "en" ? "All Categories" : "所有类别"}
+            </Badge>
+            {categories.map((category) => (
+              <Badge
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setSelectedCategory(category)}
+              >
+                {category}
               </Badge>
             ))}
           </div>
@@ -94,9 +133,18 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
                   <CardTitle className="flex-1">
                     {term.term}
                   </CardTitle>
-                  <Badge variant="outline" className="bg-purple-50 border-purple-200">
-                    {gradeLabels[term.grade]}
-                  </Badge>
+                  <div className="flex gap-2 items-center">
+                    <Badge variant="outline" className="bg-purple-50 border-purple-200">
+                      {gradeLabels[term.grade]}
+                    </Badge>
+                    <Badge 
+                      variant="outline" 
+                      className="border-teal-200"
+                      style={{ backgroundColor: '#f0fdfa', borderColor: '#99f6e4' }}
+                    >
+                      {term.category}
+                    </Badge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -131,7 +179,7 @@ export function BrowseTerms({ terms, searchQuery: externalSearchQuery, onSearchQ
 
       {sortedTerms.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
-          {cardLanguage === "en" ? "No terms found matching your search." : "未找到匹配的术语。"}
+          {t.noTermsFound}
         </div>
       )}
     </div>

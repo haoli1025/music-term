@@ -4,6 +4,8 @@ export interface MusicTerm {
   id: string;
   term: string;
   definition: string;
+  language: string;
+  category: string;
   grade: number;
   example?: string;
   termChinese: string;
