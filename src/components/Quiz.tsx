@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MusicTerm, grades, gradeLabels, gradeLabelsChinese } from "../data/musicTerms";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
@@ -20,6 +20,16 @@ interface QuizQuestion {
   optionTermMap: (MusicTerm | null)[]; // Map each option position to its term (null for correct answer)
 }
 
+// Fisher-Yates shuffle algorithm for proper randomization
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -31,21 +41,7 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
   const [quizStarted, setQuizStarted] = useState(false);
   const t = translations[cardLanguage];
 
-  useEffect(() => {
-    if (quizStarted && selectedGrade !== undefined) {
-      // Only reinitialize when grade changes, not when language changes
-      initializeQuiz();
-    }
-  }, [selectedGrade]);
-
-  // Update question language when cardLanguage changes, without regenerating questions
-  useEffect(() => {
-    if (quizStarted && questions.length > 0) {
-      updateQuestionsLanguage();
-    }
-  }, [cardLanguage]);
-
-  const initializeQuiz = () => {
+  const initializeQuiz = useCallback(() => {
     // Filter terms by grade
     const filteredTerms = selectedGrade === 0 
       ? terms 
@@ -55,36 +51,42 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
       return;
     }
 
-    // Shuffle and select 10 random terms
-    const shuffled = [...filteredTerms].sort(() => Math.random() - 0.5);
+    // Shuffle and select 10 random terms using Fisher-Yates shuffle
+    const shuffled = shuffleArray(filteredTerms);
     const selectedTerms = shuffled.slice(0, Math.min(10, filteredTerms.length));
 
     // Generate questions
     const newQuestions: QuizQuestion[] = selectedTerms.map((term) => {
       // Get wrong answer terms (store the actual terms, not just the text)
-      const wrongAnswerTerms = terms
-        .filter((t) => t.id !== term.id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3);
+      const allWrongTerms = terms.filter((t) => t.id !== term.id);
+      const shuffledWrongTerms = shuffleArray(allWrongTerms);
+      const wrongAnswerTerms = shuffledWrongTerms.slice(0, 3);
 
       // Get wrong answer texts
       const wrongAnswers = wrongAnswerTerms.map((t) => cardLanguage === "zh" ? t.definitionChinese : t.definition);
 
-      // Combine and shuffle all options
+      // Combine and shuffle all options using Fisher-Yates shuffle
       const correctAnswer = cardLanguage === "zh" ? term.definitionChinese : term.definition;
       const allOptions = [correctAnswer, ...wrongAnswers];
-      const shuffledIndices = allOptions.map((_, i) => i).sort(() => Math.random() - 0.5);
-      const options = shuffledIndices.map(i => allOptions[i]);
+      const shuffledOptions = shuffleArray(allOptions);
       
       // Create a map of which term each option position corresponds to
-      const optionTermMap: (MusicTerm | null)[] = shuffledIndices.map(i => {
-        if (i === 0) return null; // Correct answer
-        return wrongAnswerTerms[i - 1]; // Wrong answer terms
+      // This map preserves the shuffled order: optionTermMap[i] corresponds to shuffledOptions[i]
+      // When translating later, we iterate through optionTermMap in order to maintain the same positions
+      const optionTermMap: (MusicTerm | null)[] = shuffledOptions.map((option) => {
+        if (option === correctAnswer) {
+          return null; // Correct answer
+        } else {
+          // Find which wrong term this option corresponds to
+          return wrongAnswerTerms.find((t) => 
+            (cardLanguage === "zh" ? t.definitionChinese : t.definition) === option
+          ) || null;
+        }
       });
 
       return {
         term,
-        options,
+        options: shuffledOptions,
         correctAnswer,
         wrongAnswerTerms, // Store the terms for later translation
         optionTermMap, // Map each option position to its term
@@ -98,9 +100,19 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
     setScore(0);
     setQuizComplete(false);
     setQuizStarted(true);
-  };
+  }, [selectedGrade, terms]);
 
-  const updateQuestionsLanguage = () => {
+  useEffect(() => {
+    if (quizStarted && selectedGrade !== undefined) {
+      // Only reinitialize when grade changes, not when language changes
+      initializeQuiz();
+    }
+    // Only depend on selectedGrade - don't include initializeQuiz to avoid re-running when cardLanguage changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGrade]);
+
+  // Update question language when cardLanguage changes, without regenerating questions
+  const updateQuestionsLanguage = useCallback(() => {
     // Store the current state before updating
     const currentQuestion = questions[currentQuestionIndex];
     const wasAnswered = showResult;
@@ -113,12 +125,15 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
     }
     
     // Update existing questions to use the new language without changing the terms or option order
+    // IMPORTANT: optionTermMap preserves the original shuffled order, so we iterate through it
+    // in the same order to maintain the option positions when translating
     setQuestions((prevQuestions: QuizQuestion[]) => {
       const updatedQuestions = prevQuestions.map((question: QuizQuestion) => {
         // Translate correct answer
         const correctAnswer = cardLanguage === "zh" ? question.term.definitionChinese : question.term.definition;
         
         // Translate each option using the stored term mapping
+        // optionTermMap maintains the original shuffled order, so mapping over it preserves order
         const newOptions = question.optionTermMap.map((term: MusicTerm | null) => {
           if (term === null) {
             // This is the correct answer position
@@ -156,37 +171,45 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
       
       return updatedQuestions;
     });
-  };
+  }, [cardLanguage, questions, currentQuestionIndex, selectedAnswer, showResult]);
 
-  const handleStartQuiz = () => {
+  useEffect(() => {
+    if (quizStarted && questions.length > 0) {
+      updateQuestionsLanguage();
+    }
+    // Only depend on cardLanguage - don't include updateQuestionsLanguage to avoid infinite loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardLanguage]);
+
+  const handleStartQuiz = useCallback(() => {
     initializeQuiz();
-  };
+  }, [initializeQuiz]);
 
-  const handleAnswerSelect = (answer: string) => {
+  const handleAnswerSelect = useCallback((answer: string) => {
     if (showResult) return;
     setSelectedAnswer(answer);
-  };
+  }, [showResult]);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     if (!selectedAnswer) return;
 
     const isCorrect =
-      selectedAnswer === questions[currentQuestionIndex].correctAnswer;
+      selectedAnswer === questions[currentQuestionIndex]?.correctAnswer;
     if (isCorrect) {
-      setScore(score + 1);
+      setScore((prevScore: number) => prevScore + 1);
     }
     setShowResult(true);
-  };
+  }, [selectedAnswer, questions, currentQuestionIndex]);
 
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setCurrentQuestionIndex((prev: number) => prev + 1);
       setSelectedAnswer(null);
       setShowResult(false);
     } else {
       setQuizComplete(true);
     }
-  };
+  }, [currentQuestionIndex, questions.length]);
 
   if (!quizStarted || questions.length === 0) {
     return (
