@@ -60,15 +60,36 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
       // Get wrong answer terms (store the actual terms, not just the text)
       const allWrongTerms = terms.filter((t) => t.id !== term.id);
       const shuffledWrongTerms = shuffleArray(allWrongTerms);
-      const wrongAnswerTerms = shuffledWrongTerms.slice(0, 3);
+      
+      // Get the correct answer text
+      const correctAnswer = cardLanguage === "zh" ? term.definitionChinese : term.definition;
+      
+      // Select wrong answer terms with unique definitions
+      const wrongAnswerTerms: MusicTerm[] = [];
+      const seenDefinitions = new Set<string>([correctAnswer]); // Start with correct answer to avoid duplicates
+      
+      for (const wrongTerm of shuffledWrongTerms) {
+        const wrongAnswerText = cardLanguage === "zh" ? wrongTerm.definitionChinese : wrongTerm.definition;
+        // Ensure the definition is unique and not empty
+        if (wrongAnswerText && !seenDefinitions.has(wrongAnswerText)) {
+          wrongAnswerTerms.push(wrongTerm);
+          seenDefinitions.add(wrongAnswerText);
+          if (wrongAnswerTerms.length >= 3) break; // We need 3 wrong answers
+        }
+      }
 
-      // Get wrong answer texts
+      // Get wrong answer texts (guaranteed to be unique at this point)
       const wrongAnswers = wrongAnswerTerms.map((t) => cardLanguage === "zh" ? t.definitionChinese : t.definition);
 
-      // Combine and shuffle all options using Fisher-Yates shuffle
-      const correctAnswer = cardLanguage === "zh" ? term.definitionChinese : term.definition;
+      // Combine all options (correct answer + wrong answers)
+      // All options are guaranteed to be unique due to the seenDefinitions check above
       const allOptions = [correctAnswer, ...wrongAnswers];
-      const shuffledOptions = shuffleArray(allOptions);
+      
+      // Final safeguard: remove any duplicates (should never be needed, but ensures correctness)
+      const uniqueOptions = Array.from(new Set(allOptions));
+
+      // Shuffle all options using Fisher-Yates shuffle
+      const shuffledOptions = shuffleArray(uniqueOptions);
       
       // Create a map of which term each option position corresponds to
       // This map preserves the shuffled order: optionTermMap[i] corresponds to shuffledOptions[i]
@@ -143,10 +164,16 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
             return cardLanguage === "zh" ? term.definitionChinese : term.definition;
           }
         });
+        
+        // Ensure all options are unique (safeguard against duplicates)
+        const uniqueOptions = Array.from(new Set(newOptions));
+        if (uniqueOptions.length !== newOptions.length) {
+          console.warn(`Duplicate options detected when translating question for term "${question.term.term}". Using unique set.`);
+        }
 
         return {
           term: question.term, // Keep the same term
-          options: newOptions, // Keep the same order, just translated
+          options: uniqueOptions.length === newOptions.length ? newOptions : uniqueOptions, // Keep the same order, just translated
           correctAnswer,
           wrongAnswerTerms: question.wrongAnswerTerms, // Keep the same wrong answer terms
           optionTermMap: question.optionTermMap, // Keep the same mapping
