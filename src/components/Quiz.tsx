@@ -341,20 +341,29 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
 
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between mb-2 gap-2">
-            <Badge variant="outline" className="bg-purple-50 border-purple-200">
-              {t.grades[currentQuestion.term.grade as keyof typeof t.grades] || gradeLabels[currentQuestion.term.grade]}
-            </Badge>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <CardTitle className="flex-1">
+              {t.whatIs} "{currentQuestion.term.term}"
+              {currentQuestion.term.abbreviation && (
+                <span className="text-base font-normal text-muted-foreground ml-1">
+                  ({currentQuestion.term.abbreviation})
+                </span>
+              )}
+              ?
+            </CardTitle>
+            <div className="flex gap-2 items-center">
+              <Badge variant="outline" className="bg-purple-50 border-purple-200">
+                {t.grades[currentQuestion.term.grade as keyof typeof t.grades] || gradeLabels[currentQuestion.term.grade]}
+              </Badge>
+              <Badge 
+                variant="outline" 
+                className="border-teal-300"
+                style={{ backgroundColor: '#f0fdfa', borderColor: '#5eead4' }}
+              >
+                {t.categories[currentQuestion.term.category as keyof typeof t.categories] || currentQuestion.term.category}
+              </Badge>
+            </div>
           </div>
-          <CardTitle>
-            {t.whatIs} "{currentQuestion.term.term}"
-            {currentQuestion.term.abbreviation && (
-              <span className="text-base font-normal text-muted-foreground ml-1">
-                ({currentQuestion.term.abbreviation})
-              </span>
-            )}
-            ?
-          </CardTitle>
           <CardDescription>{t.selectCorrect}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
