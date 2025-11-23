@@ -121,7 +121,7 @@ export function Quiz({ terms, cardLanguage = "en" }: QuizProps) {
     setScore(0);
     setQuizComplete(false);
     setQuizStarted(true);
-  }, [selectedGrade, terms]);
+  }, [selectedGrade, terms, cardLanguage]);
 
   useEffect(() => {
     if (quizStarted && selectedGrade !== undefined) {
